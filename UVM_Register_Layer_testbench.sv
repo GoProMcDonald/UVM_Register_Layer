@@ -285,8 +285,6 @@ package my_pkg;
   
   
 endpackage: my_pkg
-
-
 module top;
 
   import uvm_pkg::*;// 导入 UVM 包
@@ -302,6 +300,10 @@ module top;
     dut_if1.clock = 0;// 初始化时钟信号为 0
     forever #5 dut_if1.clock = ~dut_if1.clock;
   end
+  initial begin
+    $dumpfile("dump.vcd"); // 指定VCD文件名
+    $dumpvars(0, top);     // 记录顶层模块所有信号（假设顶层模块叫top）
+end
 
   initial
   begin

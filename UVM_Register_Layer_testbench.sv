@@ -80,7 +80,7 @@ package my_pkg;
       my_transaction tx;//定义一个变量 tx，类型是 my_transaction
       $cast(tx, rhs);// 将传入的父类指针 rhs 转换为 my_transaction 类型
       cmd  = tx.cmd;// 将 tx 的 cmd 复制到当前事务，这三句就是把 rhs 对象里的数据（被转换为 tx 后）赋值到当前对象（this）
-      addr = tx.addr;
+      addr = tx.addr;// 将 tx 的 addr 复制到当前事务
       data = tx.data;
     endfunction
     
@@ -221,36 +221,35 @@ package my_pkg;
   typedef uvm_sequencer #(my_transaction) my_sequencer;//简化命名，等同于你之前用的 uvm_sequencer 对应 transaction 的封装
 
 
-  class my_env extends uvm_env;//定义一个环境类，用于组织测试组件和连接寄存器模型
+  class my_env extends uvm_env;//定义一个环境类 my_env，继承自 uvm_env，用于组织和管理测试组件。
 
-    `uvm_component_utils(my_env)
+    `uvm_component_utils(my_env)//注册 my_env 类到 UVM factory，用于 type_id::create()
     
-    my_reg_model  regmodel;   // Recommended name
-    my_adapter    m_adapter;
-
-    my_sequencer m_seqr;
-    my_driver    m_driv;
+    my_reg_model  regmodel;  // 定义一个 my_reg_model 类型的变量 regmodel，用于访问寄存器模型
+    my_adapter    m_adapter;// 定义一个 my_adapter 类型的变量 m_adapter，用于连接寄存器模型和序列
+    my_sequencer m_seqr;// 定义一个 my_sequencer 类型的变量 m_seqr，用于生成事务序列
+    my_driver    m_driv;// 定义一个 my_driver 类型的变量 m_driv，用于驱动 DUT 的操作
     
     function new(string name, uvm_component parent);
       super.new(name, parent);
     endfunction
  
-    function void build_phase(uvm_phase phase);
+    function void build_phase(uvm_phase phase);// 定义 build_phase 方法，用于构建环境组件
     
       // Instantiate the register model and adapter
-      regmodel = my_reg_model::type_id::create("regmodel", this);
-      regmodel.build();
+      regmodel = my_reg_model::type_id::create("regmodel", this);// 创建一个 my_reg_model 实例，名字为 "regmodel"，父组件为当前环境（this）
+      regmodel.build();// 调用 regmodel 的 build() 方法，构建寄存器模型
       
-      m_adapter = my_adapter::type_id::create("m_adapter",, get_full_name());
+      m_adapter = my_adapter::type_id::create("m_adapter",, get_full_name());// 创建一个 my_adapter 实例，名字为 "m_adapter"，父组件为当前环境的全名
       
-      m_seqr = my_sequencer::type_id::create("m_seqr", this);
-      m_driv = my_driver   ::type_id::create("m_driv", this);
+      m_seqr = my_sequencer::type_id::create("m_seqr", this);// 创建一个 my_sequencer 实例，名字为 "m_seqr"，父组件为当前环境（this）
+      m_driv = my_driver   ::type_id::create("m_driv", this);// 创建一个 my_driver 实例，名字为 "m_driv"，父组件为当前环境（this）
     endfunction
     
-    function void connect_phase(uvm_phase phase);
-      regmodel.default_map.set_sequencer( .sequencer(m_seqr), .adapter(m_adapter) );
-      regmodel.default_map.set_base_addr(0);        
-      regmodel.add_hdl_path("top.dut1");
+    function void connect_phase(uvm_phase phase);//定义 connect_phase 方法
+      regmodel.default_map.set_sequencer( .sequencer(m_seqr), .adapter(m_adapter) );//把 regmodel（一般是 UVM reg block/模型）的 default_map（默认映射）所需要的 sequencer 和 adapter 进行绑定。
+      regmodel.default_map.set_base_addr(0);// 设置默认映射的基地址为 0
+      regmodel.add_hdl_path("top.dut1");// 将寄存器模型与 DUT 的顶层模块绑定，路径为 "top.dut1"
 
       m_driv.seq_item_port.connect( m_seqr.seq_item_export );
     endfunction
@@ -269,17 +268,17 @@ package my_pkg;
     endfunction
     
     function void build_phase(uvm_phase phase);
-      m_env = my_env::type_id::create("m_env", this);
+      m_env = my_env::type_id::create("m_env", this);// 创建一个 my_env 实例，名字为 "m_env"，父组件为当前测试（this）
     endfunction
     
     task run_phase(uvm_phase phase);
-      my_reg_seq seq;
-      seq = my_reg_seq::type_id::create("seq");
-      if ( !seq.randomize() )
-        `uvm_error("", "Randomize failed")
-      seq.regmodel = m_env.regmodel;   // Set model property of uvm_reg_sequence
-      seq.starting_phase = phase;
-      seq.start( m_env.m_seqr ); 
+      my_reg_seq seq;// 定义一个 my_reg_seq 类型的变量 seq，用于生成寄存器访问序列
+      seq = my_reg_seq::type_id::create("seq");// 创建一个 my_reg_seq 实例，名字为 "seq"
+      if ( !seq.randomize() )// 调用 randomize() 方法随机化 seq 的属性，如果失败则报错
+        `uvm_error("", "Randomize failed")//如果随机化失败（返回0），则用 UVM 的 uvm_error 宏打印报错消息。
+      seq.regmodel = m_env.regmodel;   //给 seq 这个 sequence 对象的 regmodel 句柄赋值
+      seq.starting_phase = phase;// 将当前运行阶段赋值给 seq 的 starting_phase 字段
+      seq.start( m_env.m_seqr );// 启动 seq，传入 m_env.m_seqr 作为 sequencer
     endtask
      
   endclass: my_test
@@ -290,27 +289,27 @@ endpackage: my_pkg
 
 module top;
 
-  import uvm_pkg::*;
-  import my_pkg::*;
+  import uvm_pkg::*;// 导入 UVM 包
+  import my_pkg::*;// 导入自定义包 my_pkg
   
-  dut_if dut_if1 ();
+  dut_if dut_if1 ();// 创建一个 DUT 接口实例 dut_if1
   
-  dut    dut1 ( .dif(dut_if1) );
+  dut    dut1 ( .dif(dut_if1) );// 创建一个 DUT 实例 dut1，并将 dut_if1 连接到它的 dif 接口。.dif（点dif）其实就是DUT模块端口名的简写
 
   // Clock generator
   initial
   begin
-    dut_if1.clock = 0;
+    dut_if1.clock = 0;// 初始化时钟信号为 0
     forever #5 dut_if1.clock = ~dut_if1.clock;
   end
 
   initial
   begin
-    uvm_config_db #(virtual dut_if)::set(null, "*", "dut_if", dut_if1);
+    uvm_config_db #(virtual dut_if)::set(null, "*", "dut_if", dut_if1);// 让所有UVM组件都能通过" dut_if "这个名字拿到虚拟接口dut_if1，以便后续驱动和监控DUT信号。
     
-    uvm_top.finish_on_completion = 1;
+    uvm_top.finish_on_completion = 1;// 设置 UVM 顶层的 finish_on_completion 为 1，表示测试完成后自动结束仿真
     
-    run_test("my_test");
+    run_test("my_test");// 启动测试，传入测试类 my_test 的名称。my_test 是我们之前定义的测试类，它会创建环境、寄存器模型和序列等。
   end
 
 endmodule: top
